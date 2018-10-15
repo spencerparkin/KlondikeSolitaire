@@ -1,0 +1,26 @@
+.card {
+	width: 100px;
+	height: auto;
+	position: absolute;
+}
+
+.stack_base {
+	width: 100px;
+	height: 160px;
+	margin: 10px;
+	flex-grow: 0;
+	flex-shrink: 1;
+	flex-basis: auto;
+	position: relative;
+}
+
+.row_of_stacks {
+	width: auto;
+	height: auto;
+	margin: auto;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: center;
+	align-items: flex-start;
+}
