@@ -1,15 +1,9 @@
 // klondike_solitaire.jsx
 
 class Card {
-	constructor(suit, number, id=undefined) {
-		if(id !== undefined) {
-			let match = id.match(/([a-z]+)([0-9]+)/);
-			this.suit = match[1];
-			this.number = parseInt(match[2]);
-		} else {
-			this.suit = suit;
-			this.number = number;
-		}
+	constructor(suit, number) {
+        this.suit = suit;
+        this.number = number;
 	}
 	
 	color() {
@@ -66,6 +60,7 @@ class KlondikeSolitaire extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = this.generate_new_game_state();
+		this.drag_data = null;
 	}
 	
 	generate_new_game_state() {
@@ -105,7 +100,141 @@ class KlondikeSolitaire extends React.Component {
 		}
 		return new_game_state;
 	}
-	
+
+    get_drag_list(card_id, extra_info) {
+
+        for(let i = 0; i < this.state.stacks.length; i++) {
+            let stack_list = this.state.stacks[i];
+            for(let j = 0; j < stack_list.length; j++) {
+                let card = stack_list[j];
+                if(card.id() == card_id && j >= this.state.hide_sizes[i]) {
+                    extra_info.stack_i = i;
+                    extra_info.stack_j = j;
+                    let card_list = [];
+                    for(let k = j; k < stack_list.length; k++)
+                        card_list.push(stack_list[k]);
+                    return card_list;
+                }
+            }
+        }
+
+        // TODO: Should be able to drag from choose pile.
+        // TODO: Should be able to drag from suit pile.
+
+        return [];
+    }
+
+	card_mouse_down(event) {
+        event.preventDefault();
+        let extra_info = {};
+        let drag_list = this.get_drag_list(event.target.id, extra_info);
+        if(drag_list.length > 0) {
+            this.drag_data = {
+                x: event.clientX,
+                y: event.clientY,
+                total_dx: 0.0,
+                total_dy: 0.0,
+                drag_list: drag_list,
+                extra_info: extra_info
+            }
+            document.onmouseup = this.card_mouse_up.bind(this);
+            document.onmousemove = this.card_mouse_move.bind(this);
+            for(let i in this.drag_data.drag_list) {
+                let id = this.drag_data.drag_list[i].id();
+                let element = document.getElementById(id);
+                element.style.zIndex = "1";
+            }
+        }
+	}
+
+	card_mouse_move(event) {
+        event.preventDefault();
+        let dx = event.clientX - this.drag_data.x;
+        let dy = event.clientY - this.drag_data.y;
+        this.drag_data.x = event.clientX;
+        this.drag_data.y = event.clientY;
+        this.drag_data.total_dx += dx;
+        this.drag_data.total_dy += dy;
+        for(let i in this.drag_data.drag_list) {
+            let id = this.drag_data.drag_list[i].id();
+            let element = document.getElementById(id);
+            element.style.left = (element.offsetLeft + dx) + "px";
+            element.style.top = (element.offsetTop + dy) + "px";
+        }
+	}
+
+	card_mouse_up(event) {
+	    document.onmouseup = null;
+	    document.onmousemove = null;
+	    let state_changed = this.execute_drop(event);
+	    for(let i in this.drag_data.drag_list) {
+            let id = this.drag_data.drag_list[i].id();
+            let element = document.getElementById(id);
+            if(!state_changed) {
+                element.style.left = (element.offsetLeft - this.drag_data.total_dx) + "px";
+                element.style.top = (element.offsetTop - this.drag_data.total_dy) + "px";
+            }
+            element.style.zIndex = "0";
+        }
+	    this.drag_data = null;
+	}
+
+    contains_cursor(element_id, event) {
+	    let element = document.getElementById(element_id);
+	    if(!element)
+	        return false;
+	    let rect = element.getBoundingClientRect();
+	    if(event.clientX < rect.left)
+	        return false;
+	    if(event.clientX > rect.right)
+	        return false;
+	    if(event.clientY < rect.top)
+	        return false;
+	    if(event.clientY > rect.bottom)
+	        return false;
+	    return true;
+	}
+
+	execute_drop(event) {
+
+        let new_state = jQuery.extend(true, {}, this.state);
+        let dropped_card = this.drag_data.drag_list[0];
+
+	    for(let i = 0; i < new_state.stacks.length; i++) {
+            let stack_list = new_state.stacks[i];
+            if(stack_list.length > 0) {
+                let card = stack_list[stack_list.length - 1];
+                if(this.contains_cursor(card.id(), event)) {
+                    if(card.color() !== dropped_card.color() && card.number - 1 === dropped_card.number) {
+                        this.truncate_stack(new_state);
+                        new_state.stacks[i] = stack_list.concat(this.drag_data.drag_list);
+                        this.setState(new_state);
+                        return true;
+                    }
+                }
+            } else {
+                if(this.contains_cursor("stack_base_" + i, event)) {
+                    if(dropped_card.number === 13) {
+                        this.truncate_stack(new_state);
+                        new_state.stacks[i] = this.drag_data.drag_list;
+                        this.setState(new_state);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+	}
+
+    truncate_stack(new_state) {
+        let i = this.drag_data.extra_info.stack_i;
+        let j = this.drag_data.extra_info.stack_j;
+        let stack_list = new_state.stacks[i];
+        new_state.stacks[i] = stack_list.slice(0, j);
+        new_state.hide_sizes[i]--;
+    }
+
 	render_draw_pile() {
 	    if(this.state.draw_pile.length > 0)
             return <img src="images/deck/card_back.png" className="card"></img>;
@@ -123,7 +252,7 @@ class KlondikeSolitaire extends React.Component {
                     top: "0px",
                     left: (i + 20).toString() + "px"
                 };
-                return <img src={card.image_src()} style={style} className="card"></img>;
+                return <img id={card.id()} src={card.image_src()} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
             });
         }
 	}
@@ -132,7 +261,7 @@ class KlondikeSolitaire extends React.Component {
 	    if(this.state.suit_piles[suit].length > 0) {
             let length = this.state.suit_piles[suit].length;
             let card = this.state.suit_piles[suit][length - 1];
-            return <img src={card.image_src()} className="card"></img>;
+            return <img id={card.id()} src={card.image_src()} className="card"></img>;
         } else {
             return <img src="images/empty_stack.png" className="card"></img>;
         }
@@ -140,29 +269,30 @@ class KlondikeSolitaire extends React.Component {
 	
 	render_stack(i) {
 	    let stack_list = this.state.stacks[i];
+	    if(stack_list.length == 0)
+	        return <img src="images/empty_stack.png" className="card"></img>;
 	    return stack_list.map((card, j) => {
             let style = {
                 top: (j * 40).toString() + "px",
                 left: "0px"
             };
             let image_file = j < this.state.hide_sizes[i] ? "images/deck/card_back.png" : card.image_src();
-            return <img src={image_file} style={style} className="card"></img>;
+            return <img id={card.id()} src={image_file} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
         });
 	}
 	
 	render() {
-		
-		let stack_div_list = [];		
+		let stack_div_list = [];
 		stack_div_list.push(<div className="stack_base">{this.render_draw_pile()}</div>);
 		stack_div_list.push(<div className="stack_base">{this.render_choose_pile()}</div>);
-		stack_div_list.push(<div className="stack_base"><img src="images/empty_stack.png" className="card"></img></div>);
+		stack_div_list.push(<div className="stack_base"></div>);
 		for(let suit in this.state.suit_piles)
 			stack_div_list.push(<div className="stack_base">{this.render_suit_pile(suit)}</div>);
 		let first_row_of_stacks_div = React.createElement('div', {className: "row_of_stacks"}, ...stack_div_list);
 		
 		stack_div_list = [];
 		for(let i = 0; i < this.state.stacks.length; i++)
-			stack_div_list.push(<div className="stack_base">{this.render_stack(i)}</div>);
+			stack_div_list.push(<div className="stack_base" id={"stack_base_" + i}>{this.render_stack(i)}</div>);
 		let second_row_of_stacks_div = React.createElement('div', {className: "row_of_stacks"}, ...stack_div_list);
 		
 		return React.createElement('div', null, first_row_of_stacks_div, second_row_of_stacks_div);
