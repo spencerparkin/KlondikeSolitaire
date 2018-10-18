@@ -147,6 +147,25 @@ class KlondikeSolitaire extends React.Component {
 		return new_game_state;
 	}
 
+    draw_pile_click() {
+        if(this.state.draw_pile.length > 0 || this.state.choose_pile.length > 0) {
+            let new_state = jQuery.extend(true, {}, this.state);
+            if(new_state.draw_pile.length > 0) {
+                for(let i = 0; i < 3 && new_state.draw_pile.length > 0; i++) {
+                    let card = new_state.draw_pile.pop();
+                    new_state.choose_pile.push(card);
+                }
+                this.setState(new_state);
+            } else {
+                while(new_state.choose_pile.length > 0) {
+                    let card = new_state.choose_pile.pop();
+                    new_state.draw_pile.push(card);
+                }
+                this.setState(new_state);
+            }
+        }
+    }
+
     get_drag_list(card_id, extra_info) {
 
         for(let i = 0; i < this.state.stacks.length; i++) {
@@ -314,9 +333,9 @@ class KlondikeSolitaire extends React.Component {
 
 	render_draw_pile() {
 	    if(this.state.draw_pile.length > 0)
-            return <img src="images/deck/card_back.png" className="card"></img>;
+            return <img src="images/deck/card_back.png" className="card" onClick={this.draw_pile_click.bind(this)}></img>;
         else
-            return <img src="images/empty_stack.png" className="card"></img>;
+            return <img src="images/empty_stack.png" className="card" onClick={this.draw_pile_click.bind(this)}></img>;
 	}
 	
 	render_choose_pile() {
@@ -324,10 +343,10 @@ class KlondikeSolitaire extends React.Component {
             return <img src="images/empty_stack.png" className="card"></img>;
         else {
             let j = this.state.choose_pile.length - Math.min(3, this.state.choose_pile.length);
-            return this.state.choose_pile.filter((card, i) => i >= j).map(card => {
+            return this.state.choose_pile.filter((card, i) => i >= j).map((card, i) => {
                 let style = {
                     top: "0px",
-                    left: (i + 20).toString() + "px"
+                    left: (i * 20).toString() + "px"
                 };
                 return <img id={card.id()} src={card.image_src()} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
             });
