@@ -113,12 +113,12 @@ class KlondikeSolitaire extends React.Component {
 		let new_game_state = {
 			"draw_pile": [],
 			"choose_pile": [],
-			"suit_piles": {
-				"spades": [],
-				"clubs": [],
-				"hearts": [],
-				"diamonds": []
-			},
+			"suit_piles": [
+				[],
+				[],
+				[],
+				[]
+			],
 			"stacks": [
 				[],
 				[],
@@ -245,10 +245,11 @@ class KlondikeSolitaire extends React.Component {
 
 	execute_drop(event) {
 
+        let i;
         let new_state = jQuery.extend(true, {}, this.state);
         let dropped_card = this.drag_data.drag_list[0];
 
-	    for(let i = 0; i < new_state.stacks.length; i++) {
+	    for(i = 0; i < new_state.stacks.length; i++) {
             let stack_list = new_state.stacks[i];
             if(stack_list.length > 0) {
                 let card = stack_list[stack_list.length - 1];
@@ -267,6 +268,30 @@ class KlondikeSolitaire extends React.Component {
                         new_state.stacks[i] = this.drag_data.drag_list;
                         this.setState(new_state);
                         return true;
+                    }
+                }
+            }
+        }
+
+        if(this.drag_data.drag_list.length === 1) {
+            for(i = 0; i < new_state.suit_piles.length; i++) {
+                let stack_list = new_state.suit_piles[i];
+                if(stack_list.length === 0) {
+                    if(dropped_card.number === 1 && this.contains_cursor("suit_pile_base_" + i, event)) {
+                        this.truncate_stack(new_state);
+                        new_state.suit_piles[i] = [dropped_card];
+                        this.setState(new_state);
+                        return true;
+                    }
+                } else {
+                    let top_card = stack_list[stack_list.length - 1];
+                    if(top_card.number + 1 === dropped_card.number && this.contains_cursor(top_card.id(), event)) {
+                        if(top_card.suit === dropped_card.suit) {
+                            this.truncate_stack(new_state);
+                            new_state.suit_piles[i].push(dropped_card);
+                            this.setState(new_state);
+                            return true;
+                        }
                     }
                 }
             }
@@ -309,13 +334,13 @@ class KlondikeSolitaire extends React.Component {
         }
 	}
 	
-	render_suit_pile(suit) {
-	    if(this.state.suit_piles[suit].length > 0) {
-            let length = this.state.suit_piles[suit].length;
-            let card = this.state.suit_piles[suit][length - 1];
-            return <img id={card.id()} src={card.image_src()} className="card"></img>;
+	render_suit_pile(i) {
+	    if(this.state.suit_piles[i].length > 0) {
+            let length = this.state.suit_piles[i].length;
+            let top_card = this.state.suit_piles[i][length - 1];
+            return <img id={top_card.id()} src={top_card.image_src()} className="card"></img>;
         } else {
-            return <img src="images/empty_stack.png" className="card"></img>;
+            return <img id={"suit_pile_base_" + i} src="images/empty_stack.png" className="card"></img>;
         }
 	}
 	
@@ -339,8 +364,8 @@ class KlondikeSolitaire extends React.Component {
 		stack_div_list.push(<div className="stack_base">{this.render_draw_pile()}</div>);
 		stack_div_list.push(<div className="stack_base">{this.render_choose_pile()}</div>);
 		stack_div_list.push(<div className="stack_base"></div>);
-		for(let suit in this.state.suit_piles)
-			stack_div_list.push(<div className="stack_base">{this.render_suit_pile(suit)}</div>);
+		for(let i = 0; i < this.state.suit_piles.length; i++)
+			stack_div_list.push(<div className="stack_base">{this.render_suit_pile(i)}</div>);
 		let first_row_of_stacks_div = React.createElement('div', {className: "row_of_stacks"}, ...stack_div_list);
 		
 		stack_div_list = [];
