@@ -61,8 +61,54 @@ class KlondikeSolitaire extends React.Component {
 		super(props);
 		this.state = this.generate_new_game_state();
 		this.drag_data = null;
+		this.state_history = [];
+		this.state_future = [];
+		this.update_undo_redo_buttons();
 	}
-	
+
+    new_game() {
+        let new_state = game.generate_new_game_state();
+        this.setState(new_state);
+        this.state_history = [];
+        this.state_future = [];
+        this.update_undo_redo_buttons();
+    }
+
+    update_undo_redo_buttons() {
+        let undo_button = document.getElementById("undo_button");
+        let redo_button = document.getElementById("redo_button");
+        undo_button.disabled = (this.state_history.length == 0) ? true : false;
+        redo_button.disabled = (this.state_future.length == 0) ? true : false;
+    }
+
+    undo() {
+        if(this.state_history.length > 0) {
+            let old_state = jQuery.extend(true, {}, this.state);
+            this.state_future.unshift(old_state);
+            let new_state = this.state_history.pop();
+            super.setState(new_state);
+            this.update_undo_redo_buttons();
+        }
+    }
+
+    redo() {
+        if(this.state_future.length > 0) {
+            let old_state = jQuery.extend(true, {}, this.state);
+            this.state_history.push(old_state);
+            let new_state = this.state_future.shift();
+            super.setState(new_state);
+            this.update_undo_redo_buttons();
+        }
+    }
+
+	setState(new_state) {
+	    let old_state = jQuery.extend(true, {}, this.state);
+	    this.state_history.push(old_state)
+	    this.state_future = [];
+	    this.update_undo_redo_buttons();
+	    super.setState(new_state);
+	}
+
 	generate_new_game_state() {
 		let new_game_state = {
 			"draw_pile": [],
@@ -142,7 +188,8 @@ class KlondikeSolitaire extends React.Component {
             for(let i in this.drag_data.drag_list) {
                 let id = this.drag_data.drag_list[i].id();
                 let element = document.getElementById(id);
-                element.style.zIndex = "1";
+                let z = parseInt(element.style.zIndex);
+                element.style.zIndex = (z + 100).toString();
             }
         }
 	}
@@ -167,14 +214,15 @@ class KlondikeSolitaire extends React.Component {
 	    document.onmouseup = null;
 	    document.onmousemove = null;
 	    let state_changed = this.execute_drop(event);
-	    for(let i in this.drag_data.drag_list) {
-            let id = this.drag_data.drag_list[i].id();
-            let element = document.getElementById(id);
-            if(!state_changed) {
+	    if(!state_changed) {
+	        for(let i in this.drag_data.drag_list) {
+                let id = this.drag_data.drag_list[i].id();
+                let element = document.getElementById(id);
                 element.style.left = (element.offsetLeft - this.drag_data.total_dx) + "px";
                 element.style.top = (element.offsetTop - this.drag_data.total_dy) + "px";
+                let z = parseInt(element.style.zIndex);
+                element.style.zIndex = (z - 100).toString();
             }
-            element.style.zIndex = "0";
         }
 	    this.drag_data = null;
 	}
@@ -274,7 +322,8 @@ class KlondikeSolitaire extends React.Component {
 	    return stack_list.map((card, j) => {
             let style = {
                 top: (j * 40).toString() + "px",
-                left: "0px"
+                left: "0px",
+                zIndex: j.toString()
             };
             let image_file = j < this.state.hide_sizes[i] ? "images/deck/card_back.png" : card.image_src();
             return <img id={card.id()} src={image_file} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
@@ -302,6 +351,13 @@ class KlondikeSolitaire extends React.Component {
 var game = ReactDOM.render(<KlondikeSolitaire/>, document.getElementById("klondike_solitaire"));
 
 var new_game_button_clicked = () => {
-    // Note that setState is an asynchronous call!
-    game.setState(game.generate_new_game_state());
+    game.new_game();
+}
+
+var undo_button_clicked = () => {
+    game.undo();
+}
+
+var redo_button_clicked = () => {
+    game.redo();
 }
