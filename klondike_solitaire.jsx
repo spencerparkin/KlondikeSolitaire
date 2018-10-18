@@ -168,25 +168,34 @@ class KlondikeSolitaire extends React.Component {
 
     get_drag_list(card_id, extra_info) {
 
-        for(let i = 0; i < this.state.stacks.length; i++) {
+        let card_list = [];
+        let i;
+
+        for(i = 0; i < this.state.stacks.length; i++) {
             let stack_list = this.state.stacks[i];
             for(let j = 0; j < stack_list.length; j++) {
                 let card = stack_list[j];
                 if(card.id() == card_id && j >= this.state.hide_sizes[i]) {
                     extra_info.stack_i = i;
                     extra_info.stack_j = j;
-                    let card_list = [];
                     for(let k = j; k < stack_list.length; k++)
                         card_list.push(stack_list[k]);
-                    return card_list;
+                    break;
                 }
             }
         }
 
-        // TODO: Should be able to drag from choose pile.
+        if(this.state.choose_pile.length > 0) {
+            let top_card = this.state.choose_pile[this.state.choose_pile.length - 1];
+            if(top_card.id() == card_id) {
+                card_list = [top_card];
+                extra_info.choose_pile = true;
+            }
+        }
+        
         // TODO: Should be able to drag from suit pile.
 
-        return [];
+        return card_list;
     }
 
 	card_mouse_down(event) {
@@ -327,8 +336,10 @@ class KlondikeSolitaire extends React.Component {
             new_state.stacks[i] = stack_list.slice(0, j);
             if(new_state.stacks[i].length === new_state.hide_sizes[i])
                 new_state.hide_sizes[i]--;
+        } else if(this.drag_data.extra_info.choose_pile === true) {
+            new_state.choose_pile.pop();
         }
-        // TODO: Else, truncate suit pile or choose pile based on extra info.
+        // TODO: Else, truncate suit pile based on extra info.
     }
 
 	render_draw_pile() {
