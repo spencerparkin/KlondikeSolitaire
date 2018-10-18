@@ -280,7 +280,8 @@ class KlondikeSolitaire extends React.Component {
         let j = this.drag_data.extra_info.stack_j;
         let stack_list = new_state.stacks[i];
         new_state.stacks[i] = stack_list.slice(0, j);
-        new_state.hide_sizes[i]--;
+        if(new_state.stacks[i].length === new_state.hide_sizes[i])
+            new_state.hide_sizes[i]--;
     }
 
 	render_draw_pile() {
