@@ -379,12 +379,15 @@ class KlondikeSolitaire extends React.Component {
 	    let stack_list = this.state.stacks[i];
 	    if(stack_list.length == 0)
 	        return <img src="images/empty_stack.png" className="card"></img>;
+	    let offset = 0;
 	    return stack_list.map((card, j) => {
             let style = {
-                top: (j * 40).toString() + "px",
+                top: offset.toString() + "px",
                 left: "0px",
                 zIndex: j.toString()
             };
+            let delta = j < this.state.hide_sizes[i] ? 20 : 40;
+            offset += delta;
             let image_file = j < this.state.hide_sizes[i] ? "images/deck/card_back.png" : card.image_src();
             return <img id={card.id()} key={card.id()} src={image_file} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
         });
