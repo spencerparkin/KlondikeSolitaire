@@ -357,9 +357,10 @@ class KlondikeSolitaire extends React.Component {
             return this.state.choose_pile.filter((card, i) => i >= j).map((card, i) => {
                 let style = {
                     top: "0px",
-                    left: (i * 20).toString() + "px"
+                    left: (i * 20).toString() + "px",
+                    zIndex: i.toString()
                 };
-                return <img id={card.id()} src={card.image_src()} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
+                return <img id={card.id()} key={card.id()} src={card.image_src()} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
             });
         }
 	}
@@ -385,7 +386,7 @@ class KlondikeSolitaire extends React.Component {
                 zIndex: j.toString()
             };
             let image_file = j < this.state.hide_sizes[i] ? "images/deck/card_back.png" : card.image_src();
-            return <img id={card.id()} src={image_file} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
+            return <img id={card.id()} key={card.id()} src={image_file} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
         });
 	}
 	
