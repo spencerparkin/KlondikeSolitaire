@@ -276,12 +276,15 @@ class KlondikeSolitaire extends React.Component {
 	}
 
     truncate_stack(new_state) {
-        let i = this.drag_data.extra_info.stack_i;
-        let j = this.drag_data.extra_info.stack_j;
-        let stack_list = new_state.stacks[i];
-        new_state.stacks[i] = stack_list.slice(0, j);
-        if(new_state.stacks[i].length === new_state.hide_sizes[i])
-            new_state.hide_sizes[i]--;
+        if("stack_i" in this.drag_data.extra_info && "stack_j" in this.drag_data.extra_info) {
+            let i = this.drag_data.extra_info.stack_i;
+            let j = this.drag_data.extra_info.stack_j;
+            let stack_list = new_state.stacks[i];
+            new_state.stacks[i] = stack_list.slice(0, j);
+            if(new_state.stacks[i].length === new_state.hide_sizes[i])
+                new_state.hide_sizes[i]--;
+        }
+        // TODO: Else, truncate suit pile or choose pile based on extra info.
     }
 
 	render_draw_pile() {
