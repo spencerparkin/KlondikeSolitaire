@@ -1,0 +1,1 @@
+web: python klondike_solitaire.py
