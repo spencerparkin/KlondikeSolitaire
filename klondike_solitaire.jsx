@@ -168,13 +168,19 @@ class KlondikeSolitaire extends React.Component {
 
     get_drag_list(card_id, extra_info) {
 
+        // Babel, I think, replaces all instances of "let" with "var",
+        // so in some instances, it's necessary to pre-declare everything
+        // at the top of our routine as with traditional C language.  I've
+        // encountered some insane bugs otherwise, especialy if a loop variable
+        // is declared and used in more than one for-loop.
         let card_list = [];
-        let i;
+        let stack_list, top_card, card;
+        let i, j;
 
         for(i = 0; i < this.state.stacks.length; i++) {
-            let stack_list = this.state.stacks[i];
-            for(let j = 0; j < stack_list.length; j++) {
-                let card = stack_list[j];
+            stack_list = this.state.stacks[i];
+            for(j = 0; j < stack_list.length; j++) {
+                card = stack_list[j];
                 if(card.id() == card_id && j >= this.state.hide_sizes[i]) {
                     extra_info.stack_i = i;
                     extra_info.stack_j = j;
@@ -186,14 +192,23 @@ class KlondikeSolitaire extends React.Component {
         }
 
         if(this.state.choose_pile.length > 0) {
-            let top_card = this.state.choose_pile[this.state.choose_pile.length - 1];
+            top_card = this.state.choose_pile[this.state.choose_pile.length - 1];
             if(top_card.id() == card_id) {
                 card_list = [top_card];
                 extra_info.choose_pile = true;
             }
         }
-        
-        // TODO: Should be able to drag from suit pile.
+
+        for(i = 0; i < this.state.suit_piles.length; i++) {
+            stack_list = this.state.suit_piles[i];
+            if(stack_list.length > 0) {
+                top_card = stack_list[stack_list.length - 1];
+                if(top_card.id() == card_id) {
+                    card_list = [top_card];
+                    extra_info.suit_pile_i = i;
+                }
+            }
+        }
 
         return card_list;
     }
@@ -273,17 +288,33 @@ class KlondikeSolitaire extends React.Component {
 
 	execute_drop(event) {
 
-        let i;
+        // I get a bad bug if I don't pre-declare i and j here instead
+        // of declaring them when using them in the for-loops.  I think
+        // this is because babel replaces "let" with "var".
+        let i, j;
         let new_state = jQuery.extend(true, {}, this.state);
         let dropped_card = this.drag_data.drag_list[0];
+        let top_card;
+
+        if("stack_i" in this.drag_data.extra_info && "stack_j" in this.drag_data.extra_info) {
+            i = this.drag_data.extra_info.stack_i;
+            j = this.drag_data.extra_info.stack_j;
+            let stack_list = new_state.stacks[i];
+            new_state.stacks[i] = stack_list.slice(0, j);
+            if(new_state.stacks[i].length === new_state.hide_sizes[i])
+                new_state.hide_sizes[i]--;
+        } else if(this.drag_data.extra_info.choose_pile === true) {
+            new_state.choose_pile.pop();
+        } else if("suit_pile_i" in this.drag_data.extra_info) {
+            new_state.suit_piles[this.drag_data.extra_info.suit_pile_i].pop();
+        }
 
 	    for(i = 0; i < new_state.stacks.length; i++) {
             let stack_list = new_state.stacks[i];
             if(stack_list.length > 0) {
-                let card = stack_list[stack_list.length - 1];
-                if(this.contains_cursor(card.id(), event)) {
-                    if(card.color() !== dropped_card.color() && card.number - 1 === dropped_card.number) {
-                        this.truncate_stack(new_state);
+                top_card = stack_list[stack_list.length - 1];
+                if(this.contains_cursor(top_card.id(), event)) {
+                    if(top_card.color() !== dropped_card.color() && top_card.number - 1 === dropped_card.number) {
                         new_state.stacks[i] = stack_list.concat(this.drag_data.drag_list);
                         this.setState(new_state);
                         return true;
@@ -292,7 +323,6 @@ class KlondikeSolitaire extends React.Component {
             } else {
                 if(this.contains_cursor("stack_base_" + i, event)) {
                     if(dropped_card.number === 13) {
-                        this.truncate_stack(new_state);
                         new_state.stacks[i] = this.drag_data.drag_list;
                         this.setState(new_state);
                         return true;
@@ -306,16 +336,14 @@ class KlondikeSolitaire extends React.Component {
                 let stack_list = new_state.suit_piles[i];
                 if(stack_list.length === 0) {
                     if(dropped_card.number === 1 && this.contains_cursor("suit_pile_base_" + i, event)) {
-                        this.truncate_stack(new_state);
                         new_state.suit_piles[i] = [dropped_card];
                         this.setState(new_state);
                         return true;
                     }
                 } else {
-                    let top_card = stack_list[stack_list.length - 1];
+                    top_card = stack_list[stack_list.length - 1];
                     if(top_card.number + 1 === dropped_card.number && this.contains_cursor(top_card.id(), event)) {
                         if(top_card.suit === dropped_card.suit) {
-                            this.truncate_stack(new_state);
                             new_state.suit_piles[i].push(dropped_card);
                             this.setState(new_state);
                             return true;
@@ -327,20 +355,6 @@ class KlondikeSolitaire extends React.Component {
 
         return false;
 	}
-
-    truncate_stack(new_state) {
-        if("stack_i" in this.drag_data.extra_info && "stack_j" in this.drag_data.extra_info) {
-            let i = this.drag_data.extra_info.stack_i;
-            let j = this.drag_data.extra_info.stack_j;
-            let stack_list = new_state.stacks[i];
-            new_state.stacks[i] = stack_list.slice(0, j);
-            if(new_state.stacks[i].length === new_state.hide_sizes[i])
-                new_state.hide_sizes[i]--;
-        } else if(this.drag_data.extra_info.choose_pile === true) {
-            new_state.choose_pile.pop();
-        }
-        // TODO: Else, truncate suit pile based on extra info.
-    }
 
 	render_draw_pile() {
 	    if(this.state.draw_pile.length > 0)
@@ -369,7 +383,10 @@ class KlondikeSolitaire extends React.Component {
 	    if(this.state.suit_piles[i].length > 0) {
             let length = this.state.suit_piles[i].length;
             let top_card = this.state.suit_piles[i][length - 1];
-            return <img id={top_card.id()} src={top_card.image_src()} className="card"></img>;
+            let style = {
+                zIndex: 0
+            }
+            return <img id={top_card.id()} key={top_card.id()} src={top_card.image_src()} style={style} className="card" onMouseDown={this.card_mouse_down.bind(this)}></img>;
         } else {
             return <img id={"suit_pile_base_" + i} src="images/empty_stack.png" className="card"></img>;
         }
