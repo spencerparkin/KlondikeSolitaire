@@ -147,6 +147,13 @@ class KlondikeSolitaire extends React.Component {
 		return new_game_state;
 	}
 
+	game_won() {
+	    for(let i = 0; i < this.state.suit_piles.length; i++)
+	        if(this.state.suit_piles[i].length < 13)
+	            return false;
+	    return true;
+	}
+
     draw_pile_click() {
         if(this.state.draw_pile.length > 0 || this.state.choose_pile.length > 0) {
             let new_state = jQuery.extend(true, {}, this.state);
