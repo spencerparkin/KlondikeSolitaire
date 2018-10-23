@@ -293,6 +293,15 @@ class KlondikeSolitaire extends React.Component {
 	    return true;
 	}
 
+    set_state_if_different(new_state) {
+        let cur_state_string = JSON.stringify(this.state);
+        let new_state_string = JSON.stringify(new_state);
+        if(cur_state_string === new_state_string)
+            return false;
+        this.setState(new_state);
+        return true;
+    }
+
 	execute_drop(event) {
 
         // I get a bad bug if I don't pre-declare i and j here instead
@@ -323,16 +332,14 @@ class KlondikeSolitaire extends React.Component {
                 if(this.contains_cursor(top_card.id(), event)) {
                     if(top_card.color() !== dropped_card.color() && top_card.number - 1 === dropped_card.number) {
                         new_state.stacks[i] = stack_list.concat(this.drag_data.drag_list);
-                        this.setState(new_state);
-                        return true;
+                        return this.set_state_if_different(new_state);
                     }
                 }
             } else {
                 if(this.contains_cursor("stack_base_" + i, event)) {
                     if(dropped_card.number === 13) {
                         new_state.stacks[i] = this.drag_data.drag_list;
-                        this.setState(new_state);
-                        return true;
+                        return this.set_state_if_different(new_state);
                     }
                 }
             }
@@ -344,16 +351,14 @@ class KlondikeSolitaire extends React.Component {
                 if(stack_list.length === 0) {
                     if(dropped_card.number === 1 && this.contains_cursor("suit_pile_base_" + i, event)) {
                         new_state.suit_piles[i] = [dropped_card];
-                        this.setState(new_state);
-                        return true;
+                        return this.set_state_if_different(new_state);
                     }
                 } else {
                     top_card = stack_list[stack_list.length - 1];
                     if(top_card.number + 1 === dropped_card.number && this.contains_cursor(top_card.id(), event)) {
                         if(top_card.suit === dropped_card.suit) {
                             new_state.suit_piles[i].push(dropped_card);
-                            this.setState(new_state);
-                            return true;
+                            return this.set_state_if_different(new_state);
                         }
                     }
                 }
